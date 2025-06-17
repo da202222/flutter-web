@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" and is used
+    only for generating correct absolute URLs during Flutter initialization,
+    when the application is loaded via a web server.
+
+    Placing a leading or trailing slash in the href is not recommended.
+    Modify the href attribute when deploying to avoid conflicts with
+    web server routing, potentially breaking web app embedding.
+  -->
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="皮带秤智能监控系统">
+  <meta name="flutter-service-worker-version" content=""2252706144"">
+
+  <!-- Mobile web app meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="皮带秤监控系统">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>皮带秤监控系统</title>
+  <link rel="manifest" href="manifest.json">
+
+
+  <!-- MQTT.js 加载（CDN + 本地fallback） -->
+  <script>
+    function loadMqtt() {
+      const cdnUrl = 'https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js';
+      const localUrl = 'mqtt.js'; // 实际文件位于web/mqtt.js
+      
+      // 创建脚本加载函数
+      const loadScript = (url, isFallback = false) => {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = url;
+          script.onload = () => {
+            console.log(`MQTT.js ${isFallback ? '本地' : 'CDN'}加载成功`);
+            window.mqtt = mqtt; // 设置Dart代码需要的全局变量
+            resolve();
+          };
+          script.onerror = () => {
+            console.warn(`加载失败: ${url}`);
+            reject();
+          };
+          document.head.appendChild(script);
+        });
+      };
+
+      // 先尝试CDN，失败后尝试本地
+      loadScript(cdnUrl)
+        .catch(() => loadScript(localUrl, true))
+        .catch(() => console.error('MQTT.js加载完全失败'));
+    }
+    
+    window.addEventListener('DOMContentLoaded', loadMqtt);
+  </script>
+
+    <style>
+      /* 统一字体设置 */
+      html, body, flt-semantics, flt-glass-pane, flt-scene-host {
+        font-family: -apple-system, BlinkMacSystemFont, 
+                     "Segoe UI", "Microsoft YaHei", "微软雅黑", 
+                     sans-serif;
+        margin: 0;
+        padding: 0;
+        /* 确保中文字体优先 */
+        font-display: swap;
+      }
+      
+      /* 显式声明中文字体 */
+      @font-face {
+        font-family: "Microsoft YaHei";
+        font-style: normal;
+        font-weight: 400;
+        src: local("Microsoft YaHei"), local("微软雅黑");
+      }
+    
+    /* 加载画面 */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #1976d2, #42a5f5);
+      color: white;
+    }
+    
+    .loading h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      font-weight: 300;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading" id="loading">
+    <h1>皮带秤监控系统</h1>
+    <div class="spinner"></div>
+    <p style="margin-top: 20px;">正在加载应用...</p>
+  </div>
+
+  <script>
+    // 隐藏加载画面（支持PWA模式）
+    function hideLoading() {
+      const loadingEl = document.getElementById('loading');
+      if (loadingEl) loadingEl.style.display = 'none';
+    }
+    
+    // 仅使用flutter-first-frame事件隐藏加载画面
+    window.addEventListener('flutter-first-frame', hideLoading);
+  </script>
+
+  <script src="flutter.js" defer></script>
+  <script>
+    window.addEventListener('load', function(ev) {
+      // 检查Flutter加载器是否可用
+      if (typeof _flutter === 'undefined') {
+        console.error('❌ Flutter加载器未定义，尝试备用加载方法');
+
+        // 备用加载方法
+        if (typeof flutter_bootstrap !== 'undefined') {
+          console.log('🔄 使用flutter_bootstrap加载');
+          flutter_bootstrap.loadEntrypoint({
+            onEntrypointLoaded: function(engineInitializer) {
+              engineInitializer.initializeEngine().then(function(appRunner) {
+                appRunner.runApp();
+              });
+            }
+          });
+        } else {
+          console.error('❌ 所有Flutter加载方法都失败');
+          // 显示错误信息
+          document.body.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-family: Arial, sans-serif; text-align: center;">
+              <div>
+                <h1>🚫 应用加载失败</h1>
+                <p>Flutter Web应用无法正常加载</p>
+                <p>请检查网络连接或刷新页面重试</p>
+                <button onclick="location.reload()" style="padding: 10px 20px; margin-top: 20px; background: white; color: #333; border: none; border-radius: 5px; cursor: pointer;">刷新页面</button>
+              </div>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      // 修复serviceWorkerVersion未定义问题
+      const serviceWorkerVersionMeta = document.querySelector('meta[name="flutter-service-worker-version"]');
+      const serviceWorkerVersion = serviceWorkerVersionMeta ? serviceWorkerVersionMeta.content : '';
+
+      // 使用标准Flutter加载方法
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+            console.log('✅ Flutter应用启动成功');
+          }).catch(function(error) {
+            console.error('❌ Flutter引擎初始化失败:', error);
+          });
+        }
+      }).catch(function(error) {
+        console.error('❌ Flutter入口点加载失败:', error);
+      });
+    });
+  </script>
+
+  <script>
+    // Stagewise Toolbar Initialization
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      (function() {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.stagewise.dev/toolbar.js';
+        script.async = true;
+        script.onload = function() {
+          window.Stagewise.init({
+            plugins: [],
+            environment: 'development'
+          });
+        };
+        document.head.appendChild(script);
+      })();
+    }
+  </script>
+</body>
+</html>
