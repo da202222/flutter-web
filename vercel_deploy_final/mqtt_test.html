@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>MQTT连接测试 - Vercel部署版</title>
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button {
+            padding: 12px 24px;
+            margin: 8px 4px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        #log {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 MQTT连接测试 - Vercel部署版</h1>
+        
+        <div class="status info">
+            <strong>当前环境:</strong> <span id="currentEnv"></span><br>
+            <strong>页面协议:</strong> <span id="currentProtocol"></span><br>
+            <strong>连接地址:</strong> <span id="connectionUrl"></span>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <button class="btn-primary" onclick="testConnection()">🧪 测试MQTT连接</button>
+            <button class="btn-success" onclick="testPublish()">📤 测试发布消息</button>
+            <button class="btn-danger" onclick="disconnect()">🔌 断开连接</button>
+            <button onclick="clearLog()">🗑️ 清空日志</button>
+            
+            <div class="status" id="connectionStatus" style="display:none;">
+                <span id="statusText">准备测试...</span>
+            </div>
+        </div>
+
+        <div>
+            <h3>📋 连接日志</h3>
+            <div id="log"></div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
+            <h4>📝 说明</h4>
+            <p>此页面用于测试Vercel部署环境下的MQTT连接。</p>
+            <ul>
+                <li><strong>HTTP环境</strong>: 使用 ws://117.72.196.137:8083/mqtt</li>
+                <li><strong>HTTPS环境</strong>: 临时使用 ws://117.72.196.137:8083/mqtt (可能有混合内容警告)</li>
+                <li><strong>建议</strong>: 配置EMQX的WSS支持以获得最佳体验</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let client = null;
+        
+        // 初始化页面
+        function initPage() {
+            const protocol = window.location.protocol;
+            const isHttps = protocol === 'https:';
+            
+            document.getElementById('currentEnv').textContent = isHttps ? 'HTTPS (Vercel)' : 'HTTP (本地)';
+            document.getElementById('currentProtocol').textContent = protocol;
+            
+            // 根据环境选择连接地址 (与Flutter应用保持一致)
+            const connectionUrl = 'ws://117.72.196.137:8083/mqtt';
+            document.getElementById('connectionUrl').textContent = connectionUrl;
+            
+            log(`🌐 页面加载完成 - 协议: ${protocol}`);
+            log(`📍 当前域名: ${window.location.hostname}`);
+            log(`🔗 将使用连接: ${connectionUrl}`);
+            
+            if (isHttps) {
+                log(`⚠️ HTTPS环境检测到，使用WS连接可能产生混合内容警告`);
+                log(`💡 建议: 配置EMQX的WSS支持以获得最佳体验`);
+            }
+        }
+        
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            statusDiv.style.display = 'block';
+            statusDiv.className = `status ${type}`;
+            statusText.textContent = message;
+        }
+        
+        function testConnection() {
+            if (client) {
+                log(`🔄 断开现有连接...`);
+                client.end();
+                client = null;
+            }
+            
+            const brokerUrl = 'ws://117.72.196.137:8083/mqtt';
+            log(`🔄 开始连接测试...`);
+            log(`📡 连接地址: ${brokerUrl}`);
+            
+            updateStatus('正在连接...', 'info');
+            
+            const options = {
+                clientId: 'vercel_test_' + Math.random().toString(16).substr(2, 8),
+                clean: true,
+                connectTimeout: 10000,
+                reconnectPeriod: 0,
+                username: 'web_client',
+                password: 'public'
+            };
+            
+            try {
+                client = mqtt.connect(brokerUrl, options);
+                
+                const timeout = setTimeout(() => {
+                    log(`❌ 连接超时`);
+                    updateStatus('连接超时', 'error');
+                    if (client) {
+                        client.end();
+                        client = null;
+                    }
+                }, 10000);
+                
+                client.on('connect', () => {
+                    clearTimeout(timeout);
+                    log(`✅ MQTT连接成功！`);
+                    updateStatus('连接成功', 'success');
+                    
+                    // 自动订阅测试主题
+                    client.subscribe('test/vercel', (err) => {
+                        if (err) {
+                            log(`❌ 订阅失败: ${err.message}`);
+                        } else {
+                            log(`✅ 订阅主题成功: test/vercel`);
+                        }
+                    });
+                });
+                
+                client.on('error', (error) => {
+                    clearTimeout(timeout);
+                    log(`❌ 连接错误: ${error.message || error}`);
+                    updateStatus('连接失败', 'error');
+                    client = null;
+                });
+                
+                client.on('message', (topic, message) => {
+                    log(`📨 收到消息 [${topic}]: ${message.toString()}`);
+                });
+                
+                client.on('close', () => {
+                    log(`🔌 连接已断开`);
+                    updateStatus('连接已断开', 'warning');
+                });
+                
+            } catch (error) {
+                log(`❌ 连接异常: ${error.message}`);
+                updateStatus('连接异常', 'error');
+            }
+        }
+        
+        function testPublish() {
+            if (!client) {
+                log(`❌ 请先连接MQTT服务器`);
+                updateStatus('请先连接', 'warning');
+                return;
+            }
+            
+            const testData = {
+                timestamp: new Date().toISOString(),
+                source: 'Vercel部署测试',
+                protocol: window.location.protocol,
+                hostname: window.location.hostname,
+                userAgent: navigator.userAgent.substring(0, 50) + '...'
+            };
+            
+            client.publish('test/vercel', JSON.stringify(testData, null, 2), (err) => {
+                if (err) {
+                    log(`❌ 发布失败: ${err.message}`);
+                } else {
+                    log(`✅ 发布成功: ${JSON.stringify(testData, null, 2)}`);
+                }
+            });
+        }
+        
+        function disconnect() {
+            if (client) {
+                client.end();
+                client = null;
+                log(`🔌 主动断开连接`);
+                updateStatus('已断开连接', 'info');
+            } else {
+                log(`ℹ️ 当前没有活动连接`);
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            updateStatus('日志已清空', 'info');
+        }
+        
+        // 页面加载时初始化
+        window.addEventListener('load', initPage);
+    </script>
+</body>
+</html>
