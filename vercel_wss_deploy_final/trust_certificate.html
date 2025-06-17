@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SSL证书信任指南</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .step {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 4px solid #ffc107;
+        }
+        .success { border-left-color: #28a745; }
+        .warning { border-left-color: #ffc107; }
+        .error { border-left-color: #dc3545; }
+        .info { border-left-color: #17a2b8; }
+        
+        button { 
+            padding: 12px 24px; 
+            margin: 8px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        
+        code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .browser-specific {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .browser-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 SSL证书信任指南</h1>
+        
+        <div class="step warning">
+            <h3>⚠️ 为什么需要信任证书？</h3>
+            <p>MQTTX可以关闭SSL证书验证，但浏览器为了安全必须验证证书。</p>
+            <p>我们的MQTT服务器使用自签名证书，需要手动信任。</p>
+        </div>
+
+        <div class="step info">
+            <h3>🎯 目标服务器</h3>
+            <p><strong>WSS地址:</strong> <code>wss://117.72.196.137:8084/mqtt</code></p>
+            <p><strong>HTTPS地址:</strong> <code>https://117.72.196.137:8084</code></p>
+        </div>
+
+        <div class="step">
+            <h3>📋 通用步骤</h3>
+            <ol>
+                <li>点击下面的"访问HTTPS地址"按钮</li>
+                <li>浏览器会显示"不安全"或"证书错误"警告</li>
+                <li>点击"高级"或"Advanced"</li>
+                <li>点击"继续访问"或"Proceed to 117.72.196.137"</li>
+                <li>看到页面内容后，证书已被信任</li>
+                <li>返回MQTT测试页面，重新测试WSS连接</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="btn-warning" onclick="openCertificatePage()">🔒 访问HTTPS地址信任证书</button>
+            <button class="btn-success" onclick="testWSS()">🧪 测试WSS连接</button>
+            <button class="btn-primary" onclick="goBack()">🔙 返回测试页面</button>
+        </div>
+
+        <div class="browser-specific">
+            <div class="browser-card">
+                <h4>🌐 Chrome</h4>
+                <p>显示"您的连接不是私密连接"</p>
+                <p>点击"高级" → "继续前往117.72.196.137"</p>
+            </div>
+            
+            <div class="browser-card">
+                <h4>🦊 Firefox</h4>
+                <p>显示"警告：潜在的安全风险"</p>
+                <p>点击"高级" → "接受风险并继续"</p>
+            </div>
+            
+            <div class="browser-card">
+                <h4>🧭 Safari</h4>
+                <p>显示"此连接不是私人连接"</p>
+                <p>点击"显示详细信息" → "访问此网站"</p>
+            </div>
+            
+            <div class="browser-card">
+                <h4>🌊 Edge</h4>
+                <p>显示"您的连接不是私密连接"</p>
+                <p>点击"高级" → "继续到117.72.196.137"</p>
+            </div>
+        </div>
+
+        <div class="step success" id="status" style="display: none;">
+            <h3>✅ 证书信任状态</h3>
+            <p id="statusText">正在检测...</p>
+        </div>
+
+        <div class="step info">
+            <h3>🔍 验证方法</h3>
+            <p>信任证书后，你可以通过以下方式验证：</p>
+            <ul>
+                <li>访问 <code>https://117.72.196.137:8084</code> 不再显示警告</li>
+                <li>WSS连接测试成功</li>
+                <li>浏览器地址栏显示锁图标（可能带警告）</li>
+            </ul>
+        </div>
+
+        <div class="step warning">
+            <h3>🛡️ 安全说明</h3>
+            <p><strong>注意：</strong>这种方法仅适用于开发和测试环境。</p>
+            <p>生产环境建议使用有效的SSL证书。</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@4.3.7/dist/mqtt.min.js"></script>
+    <script>
+        function openCertificatePage() {
+            const certUrl = 'https://117.72.196.137:8084';
+            const certWindow = window.open(certUrl, '_blank', 'width=800,height=600');
+            
+            showStatus('🔄 请在新窗口中信任证书...', 'info');
+            
+            // 检测窗口关闭
+            const checkClosed = setInterval(() => {
+                if (certWindow.closed) {
+                    clearInterval(checkClosed);
+                    showStatus('✅ 证书信任窗口已关闭，请测试WSS连接', 'success');
+                    
+                    // 延迟测试证书是否已信任
+                    setTimeout(checkCertificateTrust, 2000);
+                }
+            }, 1000);
+        }
+        
+        function checkCertificateTrust() {
+            showStatus('🔍 检测证书信任状态...', 'info');
+            
+            // 尝试访问HTTPS地址检测证书状态
+            fetch('https://117.72.196.137:8084/', { 
+                mode: 'no-cors',
+                cache: 'no-cache'
+            })
+            .then(() => {
+                showStatus('✅ 证书已信任！现在可以使用WSS连接了', 'success');
+            })
+            .catch(error => {
+                if (error.message.includes('certificate') || error.message.includes('SSL')) {
+                    showStatus('❌ 证书尚未信任，请重新尝试信任步骤', 'error');
+                } else {
+                    showStatus('✅ 证书可能已信任（网络错误不影响WSS连接）', 'success');
+                }
+            });
+        }
+        
+        function testWSS() {
+            showStatus('🧪 测试WSS连接...', 'info');
+            
+            try {
+                const client = mqtt.connect('wss://117.72.196.137:8084/mqtt', {
+                    clientId: 'cert_test_' + Math.random().toString(16).substr(2, 8),
+                    clean: true,
+                    connectTimeout: 10000,
+                    reconnectPeriod: 0
+                });
+                
+                const timeout = setTimeout(() => {
+                    showStatus('❌ WSS连接超时，请确认证书已信任', 'error');
+                    client.end();
+                }, 10000);
+                
+                client.on('connect', () => {
+                    clearTimeout(timeout);
+                    showStatus('🎉 WSS连接成功！证书信任完成', 'success');
+                    client.end();
+                });
+                
+                client.on('error', (error) => {
+                    clearTimeout(timeout);
+                    if (error.message.includes('certificate') || error.message.includes('SSL')) {
+                        showStatus('❌ WSS连接失败：证书问题，请重新信任证书', 'error');
+                    } else {
+                        showStatus(`❌ WSS连接失败：${error.message}`, 'error');
+                    }
+                });
+                
+            } catch (error) {
+                showStatus(`❌ WSS测试异常：${error.message}`, 'error');
+            }
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            
+            statusDiv.style.display = 'block';
+            statusDiv.className = `step ${type}`;
+            statusText.textContent = message;
+        }
+        
+        function goBack() {
+            if (window.opener) {
+                window.close();
+            } else {
+                window.location.href = 'vercel_mqtt_test.html';
+            }
+        }
+        
+        // 页面加载时自动检测证书状态
+        window.addEventListener('load', () => {
+            setTimeout(checkCertificateTrust, 1000);
+        });
+    </script>
+</body>
+</html>
