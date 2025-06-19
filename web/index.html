@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="皮带秤智能监控系统">
+  <meta name="flutter-service-worker-version" content=""408641705"">
+
+  <!-- Mobile web app meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="皮带秤监控系统">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>皮带秤监控系统</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* 统一字体设置 */
+    html, body, flt-semantics, flt-glass-pane, flt-scene-host {
+      font-family: -apple-system, BlinkMacSystemFont, 
+                  "Segoe UI", "Microsoft YaHei", "微软雅黑", 
+                  sans-serif;
+      margin: 0;
+      padding: 0;
+      /* 确保中文字体优先 */
+      font-display: swap;
+    }
+    
+    /* 显式声明中文字体 */
+    @font-face {
+      font-family: "Microsoft YaHei";
+      font-style: normal;
+      font-weight: 400;
+      src: local("Microsoft YaHei"), local("微软雅黑");
+    }
+  
+  /* 加载画面 */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  .loading h1 {
+    margin-bottom: 10px;
+    font-size: 28px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .loading .subtitle {
+    margin-bottom: 30px;
+    font-size: 16px;
+    font-weight: 300;
+    opacity: 0.9;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+  <div class="loading" id="loading">
+    <h1>🦟 皮带秤监控系统</h1>
+    <div class="subtitle">安全连接 · 优化部署</div>
+    <div class="spinner"></div>
+    <p style="margin-top: 10px;">正在初始化应用...</p>
+  </div>
+
+  <!-- MQTT.js库 - 解决Flutter Web MQTT兼容性问题 -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <script src="flutter.js" defer></script>
+  <script>
+    window.addEventListener('load', function(ev) {
+      // 修复serviceWorkerVersion未定义问题
+      const serviceWorkerVersionMeta = document.querySelector('meta[name="flutter-service-worker-version"]');
+      const serviceWorkerVersion = serviceWorkerVersionMeta ? serviceWorkerVersionMeta.content : '';
+      
+      // 使用稳定可靠的旧版初始化方法
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp();
+          });
+        }
+      });
+    });
+  </script>
+
+  <!-- Stagewise工具栏已移除，避免加载失败错误 -->
+</body>
+</html>
